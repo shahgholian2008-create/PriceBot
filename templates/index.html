@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت قیمت‌ها</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #f4f4f9; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; }
+        h1 { text-align: center; color: #2c3e50; }
+        .form-group { background: #f9f9fc; padding: 20px; border-radius: 10px; margin-bottom: 25px; }
+        input, button { padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #ccc; width: 100%; }
+        button { background: #27ae60; color: #fff; border: none; cursor: pointer; }
+        .product-item { padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .delete-btn { background: #e74c3c; color: #fff; border: none; padding: 6px 14px; border-radius: 5px; cursor: pointer; }
+        .empty-msg { text-align: center; color: #888; padding: 20px; }
+        .edit-btn {
+            background: #f39c12;
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 6px;
+        }
+        .edit-btn:hover {
+            background: #d68910;
+        }
+        /* بزرگ‌تر کردن فونت کادر جستجو */
+        #searchInput {
+            font-size: 16px;
+            padding: 12px;
+        }
+
+        /* بزرگ‌تر کردن فونت نام محصولات */
+        .product-name {
+            font-size: 16px;
+        }
+
+        /* بزرگ‌تر کردن فونت قیمت محصولات */
+        .product-price {
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 پنل مدیریت قیمت‌ها</h1>
+        <div class="form-group">
+            <h3>➕ اضافه کردن محصول جدید</h3>
+            <form id="addForm">
+                <input type="text" id="productName" placeholder="نام محصول" required>
+                <input type="text" id="productPrice" placeholder="قیمت (مثلاً ۲۵۰,۰۰۰ تومان)" required>
+                <button type="submit">➕ اضافه کن</button>
+            </form>
+        </div>
+
+        <div style="margin: 15px 0;">
+            <input type="text" id="searchInput" placeholder="🔍 جستجوی محصول..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc;">
+        </div>
+
+        <h3>📋 لیست محصولات ({{ products|length }})</h3>
+        <div id="noResult" style="display: none; text-align: center; color: #888; padding: 20px;">
+            ❌ هیچ محصولی با این نام پیدا نشد.
+        </div>
+        <div id="productList">
+            {% if products %}
+               {% for name, price in products.items() %}
+               <div class="product-item" data-name="{{ name }}">
+                    <span>
+                        <span class="product-name">{{ name }}</span>
+                        <span class="product-price">({{ price }})</span>
+                    </span>
+                    <div>
+                        <button class="edit-btn" onclick="editProduct('{{ name }}', '{{ price }}')">✏️ ویرایش</button>
+                        <button class="delete-btn" onclick="deleteProduct('{{ name }}')">🗑️ حذف</button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-msg">📭 هیچ محصولی ثبت نشده است.</div>
+            {% endif %}
+        </div>
+
+    </div>
+    <script>
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const query = this.value.trim().toLowerCase();
+            const items = document.querySelectorAll('.product-item');
+            let found = false;
+
+            items.forEach(item => {
+                const name = item.querySelector('.product-name').textContent.toLowerCase();
+                if (name.includes(query)) {
+                    item.style.display = 'flex';
+                    found = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            document.getElementById('noResult').style.display = found || query === '' ? 'none' : 'block';
+        });
+
+        async function deleteProduct(name) {
+            if (!confirm(`آیا مطمئن هستید؟`)) return;
+            const response = await fetch('/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `name=${encodeURIComponent(name)}`
+            });
+            const result = await response.json();
+            alert(result.message);
+            if (result.status === 'success') location.reload();
+        }
+
+        async function editProduct(oldName, oldPrice) {
+            const newName = prompt("نام جدید محصول را وارد کنید:", oldName);
+            if (newName === null) return;
+
+            const newPrice = prompt("قیمت جدید را وارد کنید:", oldPrice);
+            if (newPrice === null) return;
+
+            const response = await fetch('/edit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `old_name=${encodeURIComponent(oldName)}&new_name=${encodeURIComponent(newName)}&new_price=${encodeURIComponent(newPrice)}`
+            });
+
+            const result = await response.json();
+            alert(result.message);
+            if (result.status === 'success') {
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
